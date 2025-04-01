@@ -1,15 +1,14 @@
-from flask import Flask, redirect, request, session, jsonify
+from flask import Flask, render_template, redirect, request, session, jsonify
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secure_secret_key'  # Replace with a secure secret key
+app.secret_key = 'your_secret_key'
 
-# Path to your credentials.json file downloaded from Google Cloud Console
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Allow HTTP for local testing
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 CLIENT_SECRETS_FILE = "credentials.json"
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 REDIRECT_URI = "https://cal-2.onrender.com/oauth2callback"
@@ -69,7 +68,6 @@ def fetch_events():
     creds_data = session['credentials']
     creds = Credentials(**creds_data)
 
-    # Refresh token if expired
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         session['credentials'] = {
@@ -82,26 +80,8 @@ def fetch_events():
         }
 
     try:
-        # Build the Calendar API service
         service = build('calendar', 'v3', credentials=creds)
-
-        # Fetch events from the primary calendar
         events_result = service.events().list(
             calendarId='primary',
-            timeMin='2025-03-01T00:00:00Z',  # Example start date (ISO format)
-            timeMax='2025-03-31T23:59:59Z',  # Example end date (ISO format)
-            singleEvents=True,
-            orderBy='startTime'
-        ).execute()
-
-        events = events_result.get('items', [])
-        if not events:
-            return jsonify({"message": "No upcoming events found."})
-        
-        return jsonify(events)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+            timeMin='2025-03-01T00:00:00Z',
+            timeMax='2025-03-31T23:59:59Z
