@@ -1,10 +1,12 @@
 from flask import Flask, redirect, request, session, jsonify
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 import os
 
 app = Flask(__name__)
-app.secret_key = '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'  # Replace with a secure secret key
+app.secret_key = 'your_secure_secret_key'  # Replace with a secure secret key
 
 # Path to your credentials.json file downloaded from Google Cloud Console
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Allow HTTP for local testing
@@ -35,7 +37,10 @@ def connect_calendar():
 # Step 2: Handle OAuth Callback
 @app.route('/oauth2callback')
 def oauth2callback():
-    state = session['state']
+    state = session.get('state')
+    if not state:
+        return "Error: Missing state in session.", 400
+
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
@@ -62,19 +67,41 @@ def fetch_events():
         return redirect('/connect-calendar')
 
     creds_data = session['credentials']
-    creds = google.oauth2.credentials.Credentials(**creds_data)
-    service = build('calendar', 'v3', credentials=creds)
+    creds = Credentials(**creds_data)
 
-    events_result = service.events().list(
-        calendarId='primary',
-        timeMin='2025-03-01T00:00:00Z',
-        timeMax='2025-03-31T23:59:59Z',
-        singleEvents=True,
-        orderBy='startTime'
-    ).execute()
+    # Refresh token if expired
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        session['credentials'] = {
+            'token': creds.token,
+            'refresh_token': creds.refresh_token,
+            'token_uri': creds.token_uri,
+            'client_id': creds.client_id,
+            'client_secret': creds.client_secret,
+            'scopes': creds.scopes
+        }
 
-    events = events_result.get('items', [])
-    return jsonify(events)
+    try:
+        # Build the Calendar API service
+        service = build('calendar', 'v3', credentials=creds)
+
+        # Fetch events from the primary calendar
+        events_result = service.events().list(
+            calendarId='primary',
+            timeMin='2025-03-01T00:00:00Z',  # Example start date (ISO format)
+            timeMax='2025-03-31T23:59:59Z',  # Example end date (ISO format)
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+
+        events = events_result.get('items', [])
+        if not events:
+            return jsonify({"message": "No upcoming events found."})
+        
+        return jsonify(events)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
