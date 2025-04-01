@@ -10,7 +10,7 @@ app.secret_key = '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'  # Replace with a secure 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Allow HTTP for local testing
 CLIENT_SECRETS_FILE = "credentials.json"
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
-REDIRECT_URI = "http://localhost:5000/oauth2callback"
+REDIRECT_URI = "https://cal-2.onrender.com/oauth2callback"
 
 # Root route
 @app.route('/')
