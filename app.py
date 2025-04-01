@@ -84,4 +84,4 @@ def fetch_events():
         events_result = service.events().list(
             calendarId='primary',
             timeMin='2025-03-01T00:00:00Z',
-            timeMax='2025-03-31T23:59:59Z
+            timeMax='2025-03-31T23:59:59Z'
