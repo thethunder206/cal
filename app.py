@@ -16,7 +16,11 @@ REDIRECT_URI = "https://cal-2.onrender.com/oauth2callback"
 
 @app.route('/')
 def home():
-    return "Welcome to the Google Calendar Integration App!"
+    return jsonify({"message": "Welcome to the Google Calendar Integration App!", "next_step": "/start-sync"})
+
+@app.route('/start-sync')
+def start_sync():
+    return jsonify({"message": "Sync your Google Calendar by clicking the button", "next_step": "/connect-calendar"})
 
 @app.route('/connect-calendar')
 def connect_calendar():
@@ -30,13 +34,13 @@ def connect_calendar():
         include_granted_scopes='true'
     )
     session['state'] = state
-    return redirect(authorization_url)
+    return jsonify({"authorization_url": authorization_url})
 
 @app.route('/oauth2callback')
 def oauth2callback():
     state = session.get('state')
     if not state:
-        return "Error: Missing state in session.", 400
+        return jsonify({"error": "Missing state in session"}), 400
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
@@ -60,7 +64,7 @@ def oauth2callback():
 @app.route('/fetch-events')
 def fetch_events():
     if 'credentials' not in session:
-        return redirect('/connect-calendar')
+        return jsonify({"error": "User not authenticated"}), 401
 
     creds_data = session['credentials']
     creds = Credentials(**creds_data)
